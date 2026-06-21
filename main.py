@@ -153,3 +153,42 @@ UNIDADES = {
     }
 }
 
+
+# ------------------------------------------------------------
+# APLICACION PRINCIPAL
+# ------------------------------------------------------------
+
+class Juego:
+    def __init__(self):
+        self.ventana = tk.Tk()
+        self.ventana.title("Defensa y Asalto de Base")
+        self.ventana.geometry("1100x720")
+        self.ventana.resizable(False, False)
+
+        self.jugadores = self.cargar_jugadores()
+        self.defensor = None
+        self.atacante = None
+
+        self.faccion_defensor = None
+        self.faccion_atacante = None
+
+        self.ronda = 1
+        self.victorias_defensor = 0
+        self.victorias_atacante = 0
+
+        self.dinero_defensor = DINERO_INICIAL
+        self.dinero_atacante = DINERO_INICIAL
+
+        self.matriz = []
+        self.botones = []
+        self.torres = []
+        self.unidades = []
+        self.muros = {}
+        self.base_vida = 350
+        self.base_vida_max = 350
+
+        self.herramienta_defensor = "muro"
+        self.herramienta_atacante = "soldado"
+        self.fase = "menu"
+
+        self.menu()
