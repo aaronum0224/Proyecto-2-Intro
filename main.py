@@ -192,3 +192,70 @@ class Juego:
         self.fase = "menu"
 
         self.menu()
+
+    # --------------------------------------------------------
+    # UTILIDADES
+    # --------------------------------------------------------
+
+    def limpiar(self):
+        for widget in self.ventana.winfo_children():
+            widget.destroy()
+
+    def cargar_jugadores(self):
+        if not os.path.exists(ARCHIVO_JUGADORES):
+            return {}
+
+        try:
+            with open(ARCHIVO_JUGADORES, "r", encoding="utf-8") as archivo:
+                datos = json.load(archivo)
+        except:
+            return {}
+
+        jugadores = {}
+        for usuario in datos:
+            info = datos[usuario]
+            jugadores[usuario] = Jugador(
+                info["usuario"],
+                info["contrasena"],
+                info.get("victorias_defensor", 0),
+                info.get("victorias_atacante", 0)
+            )
+        return jugadores
+
+    def guardar_jugadores(self):
+        datos = {}
+        for usuario in self.jugadores:
+            datos[usuario] = self.jugadores[usuario].convertir_diccionario()
+
+        with open(ARCHIVO_JUGADORES, "w", encoding="utf-8") as archivo:
+            json.dump(datos, archivo, indent=4, ensure_ascii=False)
+
+    def crear_matriz(self):
+        self.matriz = []
+        self.torres = []
+        self.unidades = []
+        self.muros = {}
+        self.base_vida = self.base_vida_max
+
+        for f in range(FILAS):
+            fila = []
+            for c in range(COLUMNAS):
+                fila.append("libre")
+            self.matriz.append(fila)
+
+        self.matriz[BASE_FILA][BASE_COLUMNA] = "base"
+
+    def distancia(self, f1, c1, f2, c2):
+        return abs(f1 - f2) + abs(c1 - c2)
+
+    def objeto_torre(self, fila, columna):
+        for torre in self.torres:
+            if torre.fila == fila and torre.columna == columna:
+                return torre
+        return None
+
+    def objeto_unidad(self, fila, columna):
+        for unidad in self.unidades:
+            if unidad.fila == fila and unidad.columna == columna:
+                return unidad
+        return None
