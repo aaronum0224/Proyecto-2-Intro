@@ -428,3 +428,64 @@ class Juego:
             tk.Label(marco, text=texto_atq, font=("Arial", 14)).grid(row=i + 1, column=1, pady=8)
 
         tk.Button(self.ventana, text="Volver", font=("Arial", 16), command=self.menu).pack(pady=20)
+
+
+    # --------------------------------------------------------
+    # FACCIONES
+    # --------------------------------------------------------
+
+    def pantalla_facciones(self):
+        self.limpiar()
+
+        tk.Label(self.ventana, text="Selección de facciones", font=("Arial", 28, "bold")).pack(pady=20)
+
+        self.var_faccion_def = tk.StringVar(value="Medieval")
+        self.var_faccion_atq = tk.StringVar(value="Futurista")
+
+        marco = tk.Frame(self.ventana)
+        marco.pack(pady=20)
+
+        tk.Label(marco, text=f"Defensor: {self.defensor.usuario}", font=("Arial", 17, "bold")).grid(row=0, column=0, padx=80)
+        tk.Label(marco, text=f"Atacante: {self.atacante.usuario}", font=("Arial", 17, "bold")).grid(row=0, column=1, padx=80)
+
+        for faccion in FACCIONES:
+            tk.Radiobutton(
+                marco,
+                text=faccion,
+                variable=self.var_faccion_def,
+                value=faccion,
+                font=("Arial", 14)
+            ).grid(sticky="w", row=list(FACCIONES.keys()).index(faccion) + 1, column=0)
+
+            tk.Radiobutton(
+                marco,
+                text=faccion,
+                variable=self.var_faccion_atq,
+                value=faccion,
+                font=("Arial", 14)
+            ).grid(sticky="w", row=list(FACCIONES.keys()).index(faccion) + 1, column=1)
+
+        tk.Button(
+            self.ventana,
+            text="Empezar partida",
+            font=("Arial", 16),
+            command=self.iniciar_partida
+        ).pack(pady=25)
+
+    def iniciar_partida(self):
+        if self.var_faccion_def.get() == self.var_faccion_atq.get():
+            messagebox.showerror("Error", "El atacante y el defensor no pueden usar la misma facción.")
+            return
+
+        self.faccion_defensor = self.var_faccion_def.get()
+        self.faccion_atacante = self.var_faccion_atq.get()
+
+        self.ronda = 1
+        self.victorias_defensor = 0
+        self.victorias_atacante = 0
+
+        self.dinero_defensor = DINERO_INICIAL
+        self.dinero_atacante = DINERO_INICIAL
+
+        self.nueva_ronda()
+
