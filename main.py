@@ -489,7 +489,7 @@ class Juego:
 
         self.nueva_ronda()
 
-# --------------------------------------------------------
+    # --------------------------------------------------------
     # RONDAS
     # --------------------------------------------------------
 
@@ -735,3 +735,268 @@ class Juego:
                 self.botones[f][c].config(text=texto, bg=color)
 
         self.actualizar_info()
+
+    # --------------------------------------------------------
+    # COMBATE
+    # --------------------------------------------------------
+
+    def iniciar_combate(self):
+        if len(self.unidades) == 0:
+            messagebox.showerror("Error", "El atacante debe colocar al menos una unidad.")
+            return
+
+        self.fase = "combate"
+        self.limpiar()
+        self.crear_interfaz_juego("Fase de combate")
+        tk.Button(
+            self.ventana,
+            text="Ejecutar turno",
+            font=("Arial", 15, "bold"),
+            command=self.turno_combate
+        ).place(x=760, y=150)
+
+        tk.Label(
+            self.ventana,
+            text=(
+                "Orden del turno:\n"
+                "1. Torres atacan.\n"
+                "2. Unidades usan habilidad o atacan.\n"
+                "3. Unidades avanzan hacia la base.\n\n"
+                "Gana el atacante si destruye la base.\n"
+                "Gana el defensor si elimina todas las unidades."
+            ),
+            justify="left",
+            font=("Arial", 12)
+        ).place(x=720, y=220)
+
+        self.actualizar_tablero()
+
+    def turno_combate(self):
+        self.torres_atacan()
+        self.eliminar_muertos()
+
+        if self.revisar_fin_ronda():
+            return
+
+        self.unidades_atacan()
+        self.eliminar_muertos()
+
+        if self.revisar_fin_ronda():
+            return
+
+        self.mover_unidades()
+        self.eliminar_muertos()
+
+        self.actualizar_tablero()
+        self.revisar_fin_ronda()
+
+    def torres_atacan(self):
+        for torre in list(self.torres):
+            objetivo = self.buscar_unidad_en_rango(torre)
+            if objetivo is None:
+                continue
+
+            torre.contador += 1
+
+            if torre.tipo == "basica" and torre.contador >= torre.turnos_habilidad:
+                self.habilidad_torre_basica(torre, objetivo)
+                torre.contador = 0
+            elif torre.tipo == "pesada" and torre.contador >= torre.turnos_habilidad:
+                self.habilidad_torre_pesada(torre, objetivo)
+                torre.contador = 0
+            elif torre.tipo == "magica" and torre.contador >= torre.turnos_habilidad:
+                self.habilidad_torre_magica(torre, objetivo)
+                torre.contador = 0
+            else:
+                objetivo.vida -= torre.dano
+
+    def buscar_unidad_en_rango(self, torre):
+        mejor = None
+        mejor_distancia = 999
+
+        for unidad in self.unidades:
+            d = self.distancia(torre.fila, torre.columna, unidad.fila, unidad.columna)
+            if d <= torre.alcance and d < mejor_distancia:
+                mejor = unidad
+                mejor_distancia = d
+
+        return mejor
+
+    def habilidad_torre_basica(self, torre, objetivo):
+        # Disparo doble
+        objetivo.vida -= torre.dano * 2
+
+    def habilidad_torre_pesada(self, torre, objetivo):
+        # Daño en área alrededor del objetivo
+        for unidad in self.unidades:
+            if self.distancia(objetivo.fila, objetivo.columna, unidad.fila, unidad.columna) <= 1:
+                unidad.vida -= torre.dano
+
+    def habilidad_torre_magica(self, torre, objetivo):
+        # Congela y daña
+        objetivo.vida -= torre.dano
+        objetivo.congelada = 1
+
+    def unidades_atacan(self):
+        for unidad in list(self.unidades):
+            if unidad.congelada > 0:
+                unidad.congelada -= 1
+                continue
+
+            unidad.contador += 1
+
+            if unidad.tipo == "soldado" and unidad.contador >= unidad.turnos_habilidad:
+                self.habilidad_soldado(unidad)
+                unidad.contador = 0
+            elif unidad.tipo == "tanque" and unidad.contador >= unidad.turnos_habilidad:
+                self.habilidad_tanque(unidad)
+                unidad.contador = 0
+            elif unidad.tipo == "rapida" and unidad.contador >= unidad.turnos_habilidad:
+                self.habilidad_rapida(unidad)
+                unidad.contador = 0
+            else:
+                self.atacar_objetivo_cercano(unidad, unidad.dano)
+
+    def habilidad_soldado(self, unidad):
+        # Ataque doble
+        self.atacar_objetivo_cercano(unidad, unidad.dano * 2)
+
+    def habilidad_tanque(self, unidad):
+        # Escudo temporal
+        unidad.escudo = 1
+        self.atacar_objetivo_cercano(unidad, unidad.dano)
+
+    def habilidad_rapida(self, unidad):
+        # Curación
+        unidad.vida += 25
+        if unidad.vida > unidad.vida_max:
+            unidad.vida = unidad.vida_max
+        self.atacar_objetivo_cercano(unidad, unidad.dano)
+
+    def atacar_objetivo_cercano(self, unidad, dano):
+        # Primero ataca base si está cerca
+        if self.distancia(unidad.fila, unidad.columna, BASE_FILA, BASE_COLUMNA) <= 1:
+            self.base_vida -= dano
+            self.dinero_atacante += max(5, dano // 5)
+            return
+
+        # Luego ataca torres o muros cercanos
+        direcciones = [(-1,0), (1,0), (0,-1), (0,1)]
+        for df, dc in direcciones:
+            nf = unidad.fila + df
+            nc = unidad.columna + dc
+
+            if 0 <= nf < FILAS and 0 <= nc < COLUMNAS:
+                if self.matriz[nf][nc] == "torre":
+                    torre = self.objeto_torre(nf, nc)
+                    if torre:
+                        torre.vida -= dano
+                        self.dinero_atacante += max(4, dano // 6)
+                    return
+
+                if self.matriz[nf][nc] == "muro":
+                    self.muros[(nf, nc)] -= dano
+                    return
+
+    def mover_unidades(self):
+        for unidad in list(self.unidades):
+            if unidad.congelada > 0:
+                continue
+
+            pasos = unidad.velocidad
+            if unidad.tipo == "rapida" and unidad.contador == 0:
+                pasos += 1
+
+            for _ in range(pasos):
+                if self.distancia(unidad.fila, unidad.columna, BASE_FILA, BASE_COLUMNA) <= 1:
+                    break
+
+                nueva_fila, nueva_col = self.siguiente_paso(unidad)
+
+                if nueva_fila == unidad.fila and nueva_col == unidad.columna:
+                    break
+
+                self.matriz[unidad.fila][unidad.columna] = "libre"
+                unidad.fila = nueva_fila
+                unidad.columna = nueva_col
+                self.matriz[unidad.fila][unidad.columna] = "unidad"
+
+    def siguiente_paso(self, unidad):
+        opciones = []
+        direcciones = [(-1,0), (1,0), (0,-1), (0,1)]
+
+        for df, dc in direcciones:
+            nf = unidad.fila + df
+            nc = unidad.columna + dc
+
+            if 0 <= nf < FILAS and 0 <= nc < COLUMNAS:
+                if self.matriz[nf][nc] == "libre":
+                    opciones.append((self.distancia(nf, nc, BASE_FILA, BASE_COLUMNA), nf, nc))
+
+        if len(opciones) == 0:
+            return unidad.fila, unidad.columna
+
+        opciones.sort()
+        return opciones[0][1], opciones[0][2]
+
+    def eliminar_muertos(self):
+        for unidad in list(self.unidades):
+            if unidad.vida <= 0:
+                self.dinero_defensor += unidad.recompensa
+                self.matriz[unidad.fila][unidad.columna] = "libre"
+                self.unidades.remove(unidad)
+
+        for torre in list(self.torres):
+            if torre.vida <= 0:
+                self.dinero_atacante += 40
+                self.matriz[torre.fila][torre.columna] = "libre"
+                self.torres.remove(torre)
+
+        for pos in list(self.muros.keys()):
+            if self.muros[pos] <= 0:
+                f, c = pos
+                self.matriz[f][c] = "libre"
+                del self.muros[pos]
+
+    def revisar_fin_ronda(self):
+        self.actualizar_tablero()
+
+        if self.base_vida <= 0:
+            self.victorias_atacante += 1
+            messagebox.showinfo("Ronda terminada", "El atacante ganó la ronda porque destruyó la base.")
+            self.fin_ronda()
+            return True
+
+        if len(self.unidades) == 0:
+            self.victorias_defensor += 1
+            messagebox.showinfo("Ronda terminada", "El defensor ganó la ronda porque eliminó todas las unidades.")
+            self.fin_ronda()
+            return True
+
+        return False
+
+    def fin_ronda(self):
+        if self.victorias_defensor >= 3:
+            self.defensor.victorias_defensor += 1
+            self.guardar_jugadores()
+            messagebox.showinfo("Partida terminada", f"{self.defensor.usuario} ganó la partida como defensor.")
+            self.menu()
+            return
+
+        if self.victorias_atacante >= 3:
+            self.atacante.victorias_atacante += 1
+            self.guardar_jugadores()
+            messagebox.showinfo("Partida terminada", f"{self.atacante.usuario} ganó la partida como atacante.")
+            self.menu()
+            return
+
+        self.ronda += 1
+        self.nueva_ronda()
+
+    def ejecutar(self):
+        self.ventana.mainloop()
+
+
+if __name__ == "__main__":
+    app = Juego()
+    app.ejecutar()
