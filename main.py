@@ -80,3 +80,76 @@ class Unidad:
     def lista_texto(self):
         return f"{self.nombre} | Vida {self.vida} | Daño {self.dano}"
 
+# ------------------------------------------------------------
+# DATOS DEL JUEGO
+# ------------------------------------------------------------
+
+FACCIONES = {
+    "Medieval": {
+        "base": "#8B4513", "muro": "#A0522D", "torre": "#708090", "unidad": "#DC143C"
+    },
+    "Futurista": {
+        "base": "#00BFFF", "muro": "#1E90FF", "torre": "#9400D3", "unidad": "#FF1493"
+    },
+    "Naturaleza": {
+        "base": "#228B22", "muro": "#8FBC8F", "torre": "#006400", "unidad": "#DAA520"
+    }
+}
+
+TORRES = {
+    "basica": {
+        "nombre": "Torre básica",
+        "costo": 60,
+        "vida": 100,
+        "dano": 25,
+        "alcance": 3,
+        "turnos_habilidad": 3
+    },
+    "pesada": {
+        "nombre": "Torre pesada",
+        "costo": 100,
+        "vida": 180,
+        "dano": 40,
+        "alcance": 2,
+        "turnos_habilidad": 4
+    },
+    "magica": {
+        "nombre": "Torre mágica",
+        "costo": 90,
+        "vida": 90,
+        "dano": 15,
+        "alcance": 4,
+        "turnos_habilidad": 3
+    }
+}
+
+UNIDADES = {
+    "soldado": {
+        "nombre": "Soldado",
+        "costo": 50,
+        "vida": 90,
+        "dano": 25,
+        "velocidad": 1,
+        "recompensa": 25,
+        "turnos_habilidad": 3
+    },
+    "tanque": {
+        "nombre": "Tanque",
+        "costo": 110,
+        "vida": 220,
+        "dano": 45,
+        "velocidad": 1,
+        "recompensa": 55,
+        "turnos_habilidad": 4
+    },
+    "rapida": {
+        "nombre": "Unidad rápida",
+        "costo": 70,
+        "vida": 70,
+        "dano": 18,
+        "velocidad": 2,
+        "recompensa": 35,
+        "turnos_habilidad": 3
+    }
+}
+
