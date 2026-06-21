@@ -259,3 +259,172 @@ class Juego:
             if unidad.fila == fila and unidad.columna == columna:
                 return unidad
         return None
+
+    # --------------------------------------------------------
+    # MENU, LOGIN Y TOP
+    # --------------------------------------------------------
+
+    def menu(self):
+        self.limpiar()
+        self.fase = "menu"
+
+        tk.Label(
+            self.ventana,
+            text="DEFENSA Y ASALTO DE BASE",
+            font=("Arial", 32, "bold")
+        ).pack(pady=40)
+
+        tk.Button(
+            self.ventana,
+            text="Iniciar partida",
+            font=("Arial", 18),
+            width=25,
+            command=self.pantalla_login
+        ).pack(pady=15)
+
+        tk.Button(
+            self.ventana,
+            text="Top de jugadores",
+            font=("Arial", 18),
+            width=25,
+            command=self.mostrar_top
+        ).pack(pady=15)
+
+        tk.Button(
+            self.ventana,
+            text="Salir",
+            font=("Arial", 18),
+            width=25,
+            command=self.ventana.destroy
+        ).pack(pady=15)
+
+    def pantalla_login(self):
+        self.limpiar()
+
+        tk.Label(
+            self.ventana,
+            text="Registro / inicio de sesión",
+            font=("Arial", 26, "bold")
+        ).pack(pady=20)
+
+        marco = tk.Frame(self.ventana)
+        marco.pack(pady=10)
+
+        tk.Label(marco, text="Defensor", font=("Arial", 18, "bold")).grid(row=0, column=0, columnspan=2, pady=10)
+        tk.Label(marco, text="Usuario:").grid(row=1, column=0)
+        tk.Label(marco, text="Contraseña:").grid(row=2, column=0)
+
+        self.entry_def_user = tk.Entry(marco)
+        self.entry_def_pass = tk.Entry(marco, show="*")
+        self.entry_def_user.grid(row=1, column=1, padx=10)
+        self.entry_def_pass.grid(row=2, column=1, padx=10)
+
+        tk.Label(marco, text="Atacante", font=("Arial", 18, "bold")).grid(row=0, column=3, columnspan=2, pady=10)
+        tk.Label(marco, text="Usuario:").grid(row=1, column=3)
+        tk.Label(marco, text="Contraseña:").grid(row=2, column=3)
+
+        self.entry_atq_user = tk.Entry(marco)
+        self.entry_atq_pass = tk.Entry(marco, show="*")
+        self.entry_atq_user.grid(row=1, column=4, padx=10)
+        self.entry_atq_pass.grid(row=2, column=4, padx=10)
+
+        tk.Button(
+            self.ventana,
+            text="Registrar jugadores nuevos",
+            font=("Arial", 15),
+            command=self.registrar_jugadores
+        ).pack(pady=10)
+
+        tk.Button(
+            self.ventana,
+            text="Iniciar sesión",
+            font=("Arial", 15),
+            command=self.iniciar_sesion
+        ).pack(pady=10)
+
+        tk.Button(
+            self.ventana,
+            text="Volver",
+            font=("Arial", 15),
+            command=self.menu
+        ).pack(pady=10)
+
+    def registrar_jugadores(self):
+        datos = [
+            (self.entry_def_user.get().strip(), self.entry_def_pass.get().strip()),
+            (self.entry_atq_user.get().strip(), self.entry_atq_pass.get().strip())
+        ]
+
+        if datos[0][0] == "" or datos[0][1] == "" or datos[1][0] == "" or datos[1][1] == "":
+            messagebox.showerror("Error", "Debe llenar todos los espacios.")
+            return
+
+        if datos[0][0] == datos[1][0]:
+            messagebox.showerror("Error", "Los dos jugadores no pueden ser el mismo usuario.")
+            return
+
+        for usuario, contrasena in datos:
+            if usuario in self.jugadores:
+                messagebox.showerror("Error", f"El usuario {usuario} ya existe.")
+                return
+
+        for usuario, contrasena in datos:
+            self.jugadores[usuario] = Jugador(usuario, contrasena)
+
+        self.guardar_jugadores()
+        messagebox.showinfo("Listo", "Jugadores registrados. Ahora presione iniciar sesión.")
+
+    def iniciar_sesion(self):
+        du = self.entry_def_user.get().strip()
+        dp = self.entry_def_pass.get().strip()
+        au = self.entry_atq_user.get().strip()
+        ap = self.entry_atq_pass.get().strip()
+
+        if du == au:
+            messagebox.showerror("Error", "Los jugadores deben ser diferentes.")
+            return
+
+        if du not in self.jugadores or au not in self.jugadores:
+            messagebox.showerror("Error", "Uno de los usuarios no existe.")
+            return
+
+        if self.jugadores[du].contrasena != dp or self.jugadores[au].contrasena != ap:
+            messagebox.showerror("Error", "Contraseña incorrecta.")
+            return
+
+        self.defensor = self.jugadores[du]
+        self.atacante = self.jugadores[au]
+        self.pantalla_facciones()
+
+    def mostrar_top(self):
+        self.limpiar()
+
+        tk.Label(self.ventana, text="TOP DE JUGADORES", font=("Arial", 28, "bold")).pack(pady=20)
+
+        marco = tk.Frame(self.ventana)
+        marco.pack(pady=20)
+
+        defensores = list(self.jugadores.values())
+        defensores.sort(key=lambda j: j.victorias_defensor, reverse=True)
+
+        atacantes = list(self.jugadores.values())
+        atacantes.sort(key=lambda j: j.victorias_atacante, reverse=True)
+
+        tk.Label(marco, text="Top defensor", font=("Arial", 18, "bold")).grid(row=0, column=0, padx=80)
+        tk.Label(marco, text="Top atacante", font=("Arial", 18, "bold")).grid(row=0, column=1, padx=80)
+
+        for i in range(5):
+            if i < len(defensores):
+                texto_def = f"{i + 1}. {defensores[i].usuario}: {defensores[i].victorias_defensor}"
+            else:
+                texto_def = f"{i + 1}. ---"
+
+            if i < len(atacantes):
+                texto_atq = f"{i + 1}. {atacantes[i].usuario}: {atacantes[i].victorias_atacante}"
+            else:
+                texto_atq = f"{i + 1}. ---"
+
+            tk.Label(marco, text=texto_def, font=("Arial", 14)).grid(row=i + 1, column=0, pady=8)
+            tk.Label(marco, text=texto_atq, font=("Arial", 14)).grid(row=i + 1, column=1, pady=8)
+
+        tk.Button(self.ventana, text="Volver", font=("Arial", 16), command=self.menu).pack(pady=20)
