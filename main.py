@@ -489,3 +489,249 @@ class Juego:
 
         self.nueva_ronda()
 
+# --------------------------------------------------------
+    # RONDAS
+    # --------------------------------------------------------
+
+    def nueva_ronda(self):
+        self.crear_matriz()
+
+        self.dinero_defensor += BONO_RONDA
+        self.dinero_atacante += BONO_RONDA
+
+        self.fase_construccion()
+
+    def fase_construccion(self):
+        self.limpiar()
+        self.fase = "defensor"
+        self.crear_interfaz_juego("Fase de construcción del defensor")
+
+        marco = tk.Frame(self.ventana)
+        marco.place(x=700, y=120)
+
+        tk.Label(marco, text="Herramientas del defensor", font=("Arial", 16, "bold")).pack(pady=5)
+
+        opciones = [
+            ("Muro ($30)", "muro"),
+            ("Torre básica ($60)", "basica"),
+            ("Torre pesada ($100)", "pesada"),
+            ("Torre mágica ($90)", "magica"),
+            ("Borrar", "borrar")
+        ]
+
+        for texto, valor in opciones:
+            tk.Button(
+                marco,
+                text=texto,
+                width=22,
+                command=lambda v=valor: self.seleccionar_defensor(v)
+            ).pack(pady=4)
+
+        tk.Button(
+            marco,
+            text="Terminar construcción",
+            font=("Arial", 13, "bold"),
+            command=self.fase_ataque
+        ).pack(pady=20)
+
+        self.actualizar_tablero()
+
+    def fase_ataque(self):
+        self.fase = "atacante"
+        self.limpiar()
+        self.crear_interfaz_juego("Fase de compra y colocación del atacante")
+
+        marco = tk.Frame(self.ventana)
+        marco.place(x=700, y=120)
+
+        tk.Label(marco, text="Unidades del atacante", font=("Arial", 16, "bold")).pack(pady=5)
+
+        opciones = [
+            ("Soldado ($50)", "soldado"),
+            ("Tanque ($110)", "tanque"),
+            ("Unidad rápida ($70)", "rapida"),
+            ("Borrar unidad", "borrar_unidad")
+        ]
+
+        for texto, valor in opciones:
+            tk.Button(
+                marco,
+                text=texto,
+                width=22,
+                command=lambda v=valor: self.seleccionar_atacante(v)
+            ).pack(pady=4)
+
+        tk.Label(
+            marco,
+            text="Coloque unidades en los bordes del mapa.",
+            wraplength=260
+        ).pack(pady=10)
+
+        tk.Button(
+            marco,
+            text="Iniciar combate",
+            font=("Arial", 13, "bold"),
+            command=self.iniciar_combate
+        ).pack(pady=20)
+
+        self.actualizar_tablero()
+
+    def crear_interfaz_juego(self, titulo):
+        tk.Label(self.ventana, text=titulo, font=("Arial", 21, "bold")).place(x=30, y=10)
+
+        self.label_info = tk.Label(
+            self.ventana,
+            text="",
+            font=("Arial", 13),
+            justify="left"
+        )
+        self.label_info.place(x=700, y=20)
+
+        self.marco_tablero = tk.Frame(self.ventana)
+        self.marco_tablero.place(x=30, y=70)
+
+        self.botones = []
+
+        for f in range(FILAS):
+            fila_botones = []
+            for c in range(COLUMNAS):
+                b = tk.Button(
+                    self.marco_tablero,
+                    width=6,
+                    height=3,
+                    command=lambda fi=f, co=c: self.click_casilla(fi, co)
+                )
+                b.grid(row=f, column=c)
+                fila_botones.append(b)
+            self.botones.append(fila_botones)
+
+        tk.Button(
+            self.ventana,
+            text="Menú",
+            command=self.menu
+        ).place(x=1000, y=660)
+
+        self.actualizar_info()
+
+    def actualizar_info(self):
+        texto = (
+            f"Ronda: {self.ronda}\n"
+            f"Defensor: {self.defensor.usuario} | Victorias: {self.victorias_defensor} | Dinero: ${self.dinero_defensor}\n"
+            f"Atacante: {self.atacante.usuario} | Victorias: {self.victorias_atacante} | Dinero: ${self.dinero_atacante}\n"
+            f"Vida base: {self.base_vida}/{self.base_vida_max}"
+        )
+        self.label_info.config(text=texto)
+
+    def seleccionar_defensor(self, herramienta):
+        self.herramienta_defensor = herramienta
+
+    def seleccionar_atacante(self, herramienta):
+        self.herramienta_atacante = herramienta
+
+    def click_casilla(self, fila, columna):
+        if self.fase == "defensor":
+            self.click_defensor(fila, columna)
+        elif self.fase == "atacante":
+            self.click_atacante(fila, columna)
+
+    def click_defensor(self, fila, columna):
+        if self.herramienta_defensor == "borrar":
+            if self.matriz[fila][columna] == "muro":
+                self.matriz[fila][columna] = "libre"
+                self.muros.pop((fila, columna), None)
+            elif self.matriz[fila][columna] == "torre":
+                torre = self.objeto_torre(fila, columna)
+                if torre:
+                    self.torres.remove(torre)
+                self.matriz[fila][columna] = "libre"
+            self.actualizar_tablero()
+            return
+
+        if self.matriz[fila][columna] != "libre":
+            messagebox.showerror("Error", "Esa casilla no está libre.")
+            return
+
+        if self.herramienta_defensor == "muro":
+            costo = 30
+            if self.dinero_defensor < costo:
+                messagebox.showerror("Error", "No tiene suficiente dinero.")
+                return
+            self.dinero_defensor -= costo
+            self.matriz[fila][columna] = "muro"
+            self.muros[(fila, columna)] = 80
+
+        else:
+            tipo = self.herramienta_defensor
+            costo = TORRES[tipo]["costo"]
+            if self.dinero_defensor < costo:
+                messagebox.showerror("Error", "No tiene suficiente dinero.")
+                return
+            self.dinero_defensor -= costo
+            self.matriz[fila][columna] = "torre"
+            self.torres.append(Torre(tipo, fila, columna))
+
+        self.actualizar_tablero()
+
+    def click_atacante(self, fila, columna):
+        if self.herramienta_atacante == "borrar_unidad":
+            if self.matriz[fila][columna] == "unidad":
+                unidad = self.objeto_unidad(fila, columna)
+                if unidad:
+                    self.unidades.remove(unidad)
+                self.matriz[fila][columna] = "libre"
+            self.actualizar_tablero()
+            return
+
+        if fila not in [0, FILAS - 1] and columna not in [0, COLUMNAS - 1]:
+            messagebox.showerror("Error", "Las unidades solo se colocan en los bordes.")
+            return
+
+        if self.matriz[fila][columna] != "libre":
+            messagebox.showerror("Error", "Esa casilla no está libre.")
+            return
+
+        tipo = self.herramienta_atacante
+        costo = UNIDADES[tipo]["costo"]
+
+        if self.dinero_atacante < costo:
+            messagebox.showerror("Error", "No tiene suficiente dinero.")
+            return
+
+        self.dinero_atacante -= costo
+        self.matriz[fila][columna] = "unidad"
+        self.unidades.append(Unidad(tipo, fila, columna))
+        self.actualizar_tablero()
+
+    def actualizar_tablero(self):
+        color_def = FACCIONES[self.faccion_defensor]
+        color_atq = FACCIONES[self.faccion_atacante]
+
+        for f in range(FILAS):
+            for c in range(COLUMNAS):
+                valor = self.matriz[f][c]
+                texto = ""
+                color = "white"
+
+                if valor == "libre":
+                    texto = ""
+                    color = "#EEEEEE"
+                elif valor == "base":
+                    texto = "BASE\n" + str(self.base_vida)
+                    color = color_def["base"]
+                elif valor == "muro":
+                    texto = "MURO\n" + str(self.muros.get((f, c), 0))
+                    color = color_def["muro"]
+                elif valor == "torre":
+                    torre = self.objeto_torre(f, c)
+                    if torre:
+                        texto = torre.nombre.replace("Torre ", "T.") + "\n" + str(torre.vida)
+                    color = color_def["torre"]
+                elif valor == "unidad":
+                    unidad = self.objeto_unidad(f, c)
+                    if unidad:
+                        texto = unidad.nombre + "\n" + str(unidad.vida)
+                    color = color_atq["unidad"]
+
+                self.botones[f][c].config(text=texto, bg=color)
+
+        self.actualizar_info()
