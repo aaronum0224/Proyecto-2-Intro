@@ -1,7 +1,6 @@
 # Defensa y Asalto de Base
 # Proyecto 2 - Introducción a la Programación
-# Basado en una matriz 10x10 y una interfaz Tkinter.
-# Autor: complete con los integrantes del grupo.
+# Aarón Umaña y Daniel Solano.
 
 import json
 import os
